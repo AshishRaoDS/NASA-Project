@@ -1,4 +1,4 @@
-const { getAllLaunches, addNewLaunch } = require("../../models/launches/launches.model");
+const { getAllLaunches, addNewLaunch, abortLaunch, existsLaunchById } = require("../../models/launches/launches.model");
 
 
 function httpGetAllLaunches(req, res) {
@@ -11,7 +11,7 @@ function httpAddNewLaunch(req, res) {
     !launch.mission ||
     !launch.rocket ||
     !launch.launchDate ||
-    !launch.destination
+    !launch.target
   ) {
     return res.status(401).json({
       error: "Required input fields not provided"
@@ -28,8 +28,21 @@ function httpAddNewLaunch(req, res) {
   return res.status(201).json(launch)
 }
 
+function httpAbortLaunch(req, res) {
+  const launchId = req?.body?.id
+  if (!existsLaunchById(launchId)) {
+    return res.status(400).json({
+      error: "Launch does not exist"
+    })
+  }
+
+  const launch = abortLaunch(launchId)
+  return res.status(201).json(launch)
+}
+
 
 module.exports = {
   httpGetAllLaunches,
-  httpAddNewLaunch
+  httpAddNewLaunch,
+  httpAbortLaunch
 }
