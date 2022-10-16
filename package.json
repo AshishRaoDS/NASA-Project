@@ -26,5 +26,8 @@
   "homepage": "https://github.com/AshishRaoDS/NASA-Project#readme",
   "devDependencies": {
     "concurrently": "^7.4.0"
+  },
+  "dependencies": {
+    "morgan": "^1.10.0"
   }
 }

@@ -38,8 +38,12 @@ async function loadPlanetsData() {
   })
 }
 
+function getAllPlanets() {
+  return planetsDataArray
+}
+
 
 module.exports = {
   loadPlanetsData,
-  planets: planetsDataArray
+  getAllPlanets
 }
