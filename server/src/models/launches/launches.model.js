@@ -101,6 +101,7 @@ const getAllLaunches = async (queryParams) => {
     '_id': 0,
     '__v': 0
   })
+    .sort({ flightNumber: 1 })
     .skip(skip)
     .limit(limit)
 }
@@ -117,14 +118,6 @@ async function getLatestFlightNumber() {
 }
 
 async function saveNewLaunch(launch) {
-  const planet = await planets.findOne({
-    keplerName: launch.target
-  })
-
-  if (!planet) {
-    return false
-  }
-
   const newFlightNumber = (await getLatestFlightNumber()) + 1
 
   const newLaunch = Object.assign(launch, {
