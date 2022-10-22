@@ -2,7 +2,8 @@ const { getAllLaunches, abortLaunch, existsLaunchById, saveNewLaunch } = require
 
 
 async function httpGetAllLaunches(req, res) {
-  return res.status(200).json(await getAllLaunches())
+  const queryParams = req.query
+  return res.status(200).json(await getAllLaunches(queryParams))
 }
 
 async function httpAddNewLaunch(req, res) {

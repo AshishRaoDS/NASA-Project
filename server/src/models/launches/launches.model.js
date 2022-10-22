@@ -1,36 +1,75 @@
 const launchesDatabase = require('./launches.mongo')
 const planets = require("../planets/planets.mongo")
 
-const launches = new Map()
+const axios = require('axios');
+const { pagination } = require("../../services/query")
 
 const DEFAULT_FLIGHT_NUMBER = 100;
 
-let latestFlightNumber = 100;
+const SPACEX_URL = "https://api.spacexdata.com/v4/launches/query"
 
-const launch = {
-  flightNumber: 100,
-  mission: "Kepler Exploration X",
-  rocket: "Explorer IS1",
-  launchDate: new Date('December 27, 2030'),
-  target: "Kepler-1410 b",
-  customer: ['ZTM', 'NASA'],
-  upcoming: true,
-  success: true,
+const populatingLaunchData = async () => {
+  console.log('Loading launch data')
+
+  const spaceEXData = await axios.post(SPACEX_URL, {
+    query: {},
+    options: {
+      pagination: false,
+      populate: [{
+        path: "rocket",
+        select: {
+          name: 1
+        }
+      }, {
+        path: "payloads",
+        select: {
+          customers: 1
+        }
+      }]
+    }
+  })
+
+  if (spaceEXData.status !== 200) {
+    throw new Error('Error in downloading spaceEx launches data')
+  }
+
+  const allSpaceExLaunches = spaceEXData.data.docs
+  for (const spaceExLaunch of allSpaceExLaunches) {
+    const payload = spaceExLaunch.payloads.flatMap(payload => payload.customers)
+    const launch = {
+      flightNumber: spaceExLaunch['flight_number'],
+      mission: spaceExLaunch.name,
+      rocket: spaceExLaunch.rocket.name,
+      launchDate: spaceExLaunch['date_local'],
+      customer: payload,
+      upcoming: spaceExLaunch.upcoming,
+      success: spaceExLaunch?.success ? spaceExLaunch.success : false,
+    }
+
+    await saveLaunch(launch)
+  }
+
 }
 
-// launches.set(launch.flightNumber, launch)
+async function loadLaunchesData() {
+
+  const firstLaunch = await findLaunch({
+    flightNumber: 1,
+    rocket: "Falcon 1",
+    mission: "FalconSat"
+  })
+
+  if (firstLaunch) {
+    return console.log("Launch data already loaded")
+  }
+
+  populatingLaunchData()
+
+}
 
 
 
 async function saveLaunch(launch) {
-  const planet = await planets.findOne({
-    keplerName: launch.target
-  })
-
-  if (!planet) {
-    return false
-  }
-
   // Find one and update used to instead of updateOne to avoid showing unnecessary 
   // properties like $setOnInsert to the front end
   const updatedLaunch = await launchesDatabase.findOneAndUpdate({
@@ -45,17 +84,25 @@ async function saveLaunch(launch) {
   return updatedLaunch
 }
 
+async function findLaunch(filter) {
+  return await launchesDatabase.findOne(filter)
+}
+
 const existsLaunchById = async (id) => {
-  return await launchesDatabase.findOne({
+  return await findLaunch({
     flightNumber: id
   })
 }
 
-const getAllLaunches = async () => {
+const getAllLaunches = async (queryParams) => {
+  const { skip, limit } = pagination(queryParams)
+
   return await launchesDatabase.find({}, {
     '_id': 0,
     '__v': 0
   })
+    .skip(skip)
+    .limit(limit)
 }
 
 async function getLatestFlightNumber() {
@@ -70,6 +117,14 @@ async function getLatestFlightNumber() {
 }
 
 async function saveNewLaunch(launch) {
+  const planet = await planets.findOne({
+    keplerName: launch.target
+  })
+
+  if (!planet) {
+    return false
+  }
+
   const newFlightNumber = (await getLatestFlightNumber()) + 1
 
   const newLaunch = Object.assign(launch, {
@@ -84,13 +139,6 @@ async function saveNewLaunch(launch) {
   console.log('yy', newLaunch)
   return newLaunch
 }
-
-// function abortLaunch(id) {
-//   const launch = launches.get(id)
-//   launch.upcoming = false
-//   launch.success = false
-//   return launch
-// }
 
 async function abortLaunch(id) {
 
@@ -109,5 +157,6 @@ module.exports = {
   getAllLaunches,
   abortLaunch,
   saveNewLaunch,
-  existsLaunchById
+  existsLaunchById,
+  loadLaunchesData
 }
