@@ -2,6 +2,7 @@ const { parse } = require("csv-parse")
 const path = require("path")
 const fs = require("fs")
 
+const planets = require('./planets.mongo')
 
 const planetsDataArray = []
 
@@ -24,22 +25,44 @@ async function loadPlanetsData() {
       }))
       .on("data", (chunk) => {
         if (isHabitablePlanet(chunk)) {
-          planetsDataArray.push(chunk)
+          createAllPlanets(chunk)
         }
       })
       .on("error", (err) => {
         console.log(err)
         reject(err)
       })
-      .on("end", () => {
-        console.log(`${planetsDataArray.length} are the number of possible habitable planets found`)
+      .on("end", async () => {
+        const planetsCount = (await getAllPlanets()).length
+        console.log(`${planetsCount} are the number of possible habitable planets found`)
       })
     resolve()
   })
 }
 
-function getAllPlanets() {
-  return planetsDataArray
+async function getAllPlanets() {
+  //The second argument is passed to avoid returning those fields from that api
+  return await planets.find({}, {
+    '_id': 0,
+    '__v': 0
+  })
+}
+
+async function createAllPlanets(planet) {
+  // Here instead of using create, I am using updateOne so that it doesn't create a document every time this
+  // function is called
+  try {
+    await planets.updateOne({
+      keplerName: planet.kepler_name
+    }, {
+      keplerName: planet.kepler_name
+    },
+      {
+        upsert: true
+      })
+  } catch (err) {
+    console.log(`Something went wrong while updating/creating ${err}`)
+  }
 }
 
 
