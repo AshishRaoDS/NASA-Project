@@ -28,12 +28,12 @@ async function saveLaunch(launch) {
   })
 
   if (!planet) {
-    throw new Error("No such planet was found")
+    return false
   }
 
   // Find one and update used to instead of updateOne to avoid showing unnecessary 
   // properties like $setOnInsert to the front end
-  await launchesDatabase.findOneAndUpdate({
+  const updatedLaunch = await launchesDatabase.findOneAndUpdate({
     flightNumber: launch.flightNumber
   },
     launch,
@@ -41,9 +41,9 @@ async function saveLaunch(launch) {
       upsert: true
     }
   )
-}
 
-saveLaunch(launch)
+  return updatedLaunch
+}
 
 const existsLaunchById = async (id) => {
   return await launchesDatabase.findOne({

@@ -26,8 +26,13 @@ async function httpAddNewLaunch(req, res) {
     })
   }
   const newLaunchResponse = await saveNewLaunch(launch)
-  console.log('zz', newLaunchResponse)
-  return res.status(201).json(newLaunchResponse)
+  if (newLaunchResponse) {
+    return res.status(201).json(newLaunchResponse)
+  } else {
+    return res.status(400).json({
+      error: 'Launch could not be added'
+    })
+  }
 }
 
 async function httpAbortLaunch(req, res) {
